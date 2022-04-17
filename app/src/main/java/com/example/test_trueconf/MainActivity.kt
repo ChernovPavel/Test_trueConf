@@ -3,20 +3,22 @@ package com.example.test_trueconf
 import android.animation.*
 import android.annotation.SuppressLint
 import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import java.util.*
 
+const val RUSSIAN_LANGUAGE = "ru"
+const val ENGLISH_LANGUAGE = "en"
+
 class MainActivity : AppCompatActivity() {
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    private var animator: AnimatorSet? = null
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,39 +27,41 @@ class MainActivity : AppCompatActivity() {
         val textView = findViewById<TextView>(R.id.text)
         val container = findViewById<FrameLayout>(R.id.container)
 
-        container.setOnTouchListener { view, event ->
+        container.setOnTouchListener { _, event ->
+
+            animator?.cancel()
 
             val bottom = container.bottom.toFloat() - textView.height.toFloat()
             val top = container.top.toFloat()
 
-            view.tag?.let { tag ->
-                (tag as AnimatorSet).cancel()
-            }
-
             textView.x = event.x
             textView.y = event.y
+            val yCoordinate = textView.y
 
             when (event?.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    when (Locale.getDefault().displayLanguage) {
-                        "English" -> {
+                    when (Locale.getDefault().language) {
+                        ENGLISH_LANGUAGE -> {
                             textView.setTextColor(Color.RED)
                         }
-                        "русский" -> {
+                        RUSSIAN_LANGUAGE -> {
                             textView.setTextColor(Color.BLUE)
                         }
                     }
                 }
             }
 
-            val firstYDown = ObjectAnimator.ofFloat(
+            val firstTimeDownAnimation = ObjectAnimator.ofFloat(
                 textView,
                 View.TRANSLATION_Y,
                 textView.y,
                 bottom
-            )
+            ).apply {
+                duration =
+                    2000L / (container.bottom.toFloat() / (container.bottom.toFloat() - yCoordinate)).toLong()
+            }
 
-            val yUpDown = ObjectAnimator.ofFloat(
+            val upDownAnimation = ObjectAnimator.ofFloat(
                 textView,
                 View.TRANSLATION_Y,
                 bottom,
@@ -65,28 +69,26 @@ class MainActivity : AppCompatActivity() {
             ).apply {
                 repeatMode = ObjectAnimator.REVERSE
                 repeatCount = ObjectAnimator.INFINITE
-            }
-
-            val animator = AnimatorSet().apply {
-                startDelay = 5000L
                 duration = 2000L
+            }
+
+            animator = AnimatorSet().apply {
+                startDelay = 5000L
                 interpolator = LinearInterpolator()
-                playSequentially(firstYDown, yUpDown)
+                playSequentially(firstTimeDownAnimation, upDownAnimation)
+                start()
 
             }
-            view.tag = animator
-            animator.start()
             true
         }
 
         textView.setOnClickListener {
-            stopAnimation(container)
+            animator?.cancel()
         }
     }
 
-    private fun stopAnimation(view: View) {
-        view.tag?.let { tag ->
-            (tag as AnimatorSet).cancel()
-        }
+    override fun onDestroy() {
+        animator?.cancel()
+        super.onDestroy()
     }
 }
