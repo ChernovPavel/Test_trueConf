@@ -25,10 +25,14 @@ class MainActivity : AppCompatActivity() {
         val textView = findViewById<TextView>(R.id.text)
         val container = findViewById<FrameLayout>(R.id.container)
 
-        container.setOnTouchListener { _, event ->
+        container.setOnTouchListener { view, event ->
 
             val bottom = container.bottom.toFloat() - textView.height.toFloat()
             val top = container.top.toFloat()
+
+            view.tag?.let { tag ->
+                (tag as AnimatorSet).cancel()
+            }
 
             textView.x = event.x
             textView.y = event.y
@@ -53,66 +57,36 @@ class MainActivity : AppCompatActivity() {
                 bottom
             )
 
-            val yUp = ObjectAnimator.ofFloat(
+            val yUpDown = ObjectAnimator.ofFloat(
                 textView,
                 View.TRANSLATION_Y,
                 bottom,
                 top
-            )
-
-            val nextYDown = ObjectAnimator.ofFloat(
-                textView,
-                View.TRANSLATION_Y,
-                top,
-                bottom
-            )
-
-            val firstSet = AnimatorSet().apply {
-                startDelay = 2000L
-                duration = 2000L
-                interpolator = LinearInterpolator()
-                playSequentially(firstYDown, yUp)
+            ).apply {
+                repeatMode = ObjectAnimator.REVERSE
+                repeatCount = ObjectAnimator.INFINITE
             }
 
-            val nextSet = AnimatorSet().apply {
+            val animator = AnimatorSet().apply {
+                startDelay = 5000L
                 duration = 2000L
                 interpolator = LinearInterpolator()
-                playSequentially(nextYDown, yUp)
+                playSequentially(firstYDown, yUpDown)
+
             }
-
-            firstSet.start()
-
-            firstSet.addListener(object : Animator.AnimatorListener {
-                override fun onAnimationStart(p0: Animator?) {
-                    nextSet.end()
-                }
-
-                override fun onAnimationEnd(p0: Animator?) {
-                    nextSet.start()
-                }
-
-                override fun onAnimationCancel(p0: Animator?) {
-                }
-
-                override fun onAnimationRepeat(p0: Animator?) {
-                }
-            })
-
-            nextSet.addListener(object : Animator.AnimatorListener {
-                override fun onAnimationStart(p0: Animator?) {
-                }
-
-                override fun onAnimationEnd(p0: Animator?) {
-                    nextSet.start()
-                }
-
-                override fun onAnimationCancel(p0: Animator?) {
-                }
-
-                override fun onAnimationRepeat(p0: Animator?) {
-                }
-            })
+            view.tag = animator
+            animator.start()
             true
+        }
+
+        textView.setOnClickListener {
+            stopAnimation(container)
+        }
+    }
+
+    private fun stopAnimation(view: View) {
+        view.tag?.let { tag ->
+            (tag as AnimatorSet).cancel()
         }
     }
 }
